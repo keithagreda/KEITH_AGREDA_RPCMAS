@@ -1,0 +1,6 @@
+@RPCMAS.API_HostAddress = http://localhost:5195
+
+GET {{RPCMAS.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

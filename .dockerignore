@@ -1,0 +1,17 @@
+**/.dockerignore
+**/.git
+**/.gitignore
+**/.vs
+**/.vscode
+**/.idea
+**/bin
+**/obj
+**/out
+**/node_modules
+**/*.user
+**/*.suo
+**/.DS_Store
+**/secrets.dev.yaml
+**/values.dev.yaml
+LICENSE
+README.md

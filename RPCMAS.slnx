@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RPCMAS.API/RPCMAS.API.csproj" />
+    <Project Path="src/RPCMAS.Blazor/RPCMAS.Blazor.csproj" />
+    <Project Path="src/RPCMAS.Core/RPCMAS.Core.csproj" />
+    <Project Path="src/RPCMAS.Infrastructure/RPCMAS.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RPCMAS.Tests/RPCMAS.Tests.csproj" />
+  </Folder>
+</Solution>
