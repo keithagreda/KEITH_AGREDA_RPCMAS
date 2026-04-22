@@ -58,8 +58,8 @@ public static class CacheKeys
     public const string ItemByIdPrefix = "items:id:";
     public const string RequestListPrefix = "requests:list:";
 
-    public static string ItemList(string? search, int page, int size) =>
-        $"{ItemListPrefix}{search?.ToLowerInvariant() ?? ""}:{page}:{size}";
+    public static string ItemList(string? search, int? departmentId, int page, int size) =>
+        $"{ItemListPrefix}{search?.ToLowerInvariant() ?? ""}:{departmentId?.ToString() ?? ""}:{page}:{size}";
 
     public static string ItemById(int id) => $"{ItemByIdPrefix}{id}";
 

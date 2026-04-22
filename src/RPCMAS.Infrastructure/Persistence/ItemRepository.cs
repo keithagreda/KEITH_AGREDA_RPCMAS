@@ -34,6 +34,9 @@ public class ItemRepository : IItemRepository
             q = q.Where(i => i.Sku.Contains(s) || i.Name.Contains(s));
         }
 
+        if (query.DepartmentId.HasValue)
+            q = q.Where(i => i.DepartmentId == query.DepartmentId.Value);
+
         var total = await q.CountAsync(ct);
         var page = Math.Max(1, query.Page);
         var size = Math.Clamp(query.PageSize, 1, 200);

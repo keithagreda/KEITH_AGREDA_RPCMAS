@@ -15,10 +15,11 @@ public class ApiClient
 
     public ApiClient(HttpClient http) => _http = http;
 
-    public Task<PagedResponse<ItemDto>?> ListItemsAsync(string? search, int page, int pageSize, CancellationToken ct = default)
+    public Task<PagedResponse<ItemDto>?> ListItemsAsync(string? search, int? departmentId, int page, int pageSize, CancellationToken ct = default)
     {
         var qs = $"?page={page}&pageSize={pageSize}";
         if (!string.IsNullOrWhiteSpace(search)) qs += $"&search={Uri.EscapeDataString(search)}";
+        if (departmentId.HasValue) qs += $"&departmentId={departmentId.Value}";
         return GetAsync<PagedResponse<ItemDto>>($"api/v1/items{qs}", ct);
     }
 

@@ -18,11 +18,12 @@ public class ItemsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PagedResponse<ItemDto>>> List(
         [FromQuery] string? search,
+        [FromQuery] int? departmentId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 25,
         CancellationToken ct = default)
     {
-        var result = await _service.ListAsync(new ItemQuery { Search = search, Page = page, PageSize = pageSize }, ct);
+        var result = await _service.ListAsync(new ItemQuery { Search = search, DepartmentId = departmentId, Page = page, PageSize = pageSize }, ct);
         var dto = new PagedResponse<ItemDto>(
             result.Items.Select(ItemDto.From).ToList(),
             result.Page, result.PageSize, result.TotalCount, result.TotalPages);

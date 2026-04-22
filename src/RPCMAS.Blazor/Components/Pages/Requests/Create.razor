@@ -14,7 +14,7 @@
 <div class="row g-3 my-2">
     <div class="col-md-4">
         <label class="form-label">Department</label>
-        <select class="form-select" @bind="_dto.DepartmentId">
+        <select class="form-select" value="@_dto.DepartmentId" @onchange="OnDepartmentChanged">
             <option value="0">-- Select --</option>
             @if (_depts is not null) { @foreach (var d in _depts) { <option value="@d.Id">@d.Name</option> } }
         </select>
@@ -34,22 +34,43 @@
 <h4 class="mt-4">Items</h4>
 
 <div class="row g-2 mb-2">
-    <div class="col-md-6">
-        <input class="form-control" placeholder="Search SKU or name to add..." @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
+    <div class="col-md-5">
+        <input class="form-control" placeholder="Search SKU or name..." @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
     </div>
-    <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SearchItems">Search Items</button></div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SearchItems">Search</button></div>
+    <div class="col-md-2"><button class="btn btn-outline-secondary w-100" @onclick="ClearItemSearch">Clear</button></div>
 </div>
 
-@if (_searchResults is { Count: > 0 })
+@if (_itemsLoading)
 {
-    <div class="border p-2 mb-3" style="max-height:240px; overflow:auto">
-        @foreach (var i in _searchResults)
+    <p>Loading items...</p>
+}
+else if (_itemsPage is null || _itemsPage.Items.Count == 0)
+{
+    <div class="alert alert-light">No items.</div>
+}
+else
+{
+    <div class="border p-2 mb-2" style="max-height:320px; overflow-y:auto">
+        @foreach (var i in _itemsPage.Items)
         {
+            var alreadyAdded = _dto.Details.Any(d => d.ItemId == i.Id);
             <div class="d-flex justify-content-between align-items-center border-bottom py-1">
-                <div><code>@i.Sku</code> — @i.Name (@i.Color @i.Size) — @i.CurrentPrice.ToString("N2")</div>
-                <button class="btn btn-sm btn-success" @onclick="() => AddItem(i)">Add</button>
+                <div class="text-truncate me-2"><code>@i.Sku</code> — @i.Name (@i.Color @i.Size) — @i.CurrentPrice.ToString("N2")</div>
+                <button class="btn btn-sm @(alreadyAdded ? "btn-secondary" : "btn-success")"
+                        @onclick="() => AddItem(i)" disabled="@alreadyAdded">
+                    @(alreadyAdded ? "Added" : "Add")
+                </button>
             </div>
         }
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-muted small">Page @_itemsPage.Page of @_itemsPage.TotalPages — @_itemsPage.TotalCount items</span>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="PrevItemPage" disabled="@(_itemsPage.Page <= 1)">Previous</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="NextItemPage" disabled="@(_itemsPage.Page >= _itemsPage.TotalPages)">Next</button>
+        </div>
     </div>
 }
 
@@ -94,29 +115,55 @@ else
     private CreateRequestDto _dto = new() { ChangeType = ChangeType.Markdown };
     private List<DepartmentLookup>? _depts;
     private string? _search;
-    private List<ItemDto>? _searchResults;
     private bool _busy;
+    private bool _itemsLoading;
+    private int _itemPage = 1;
+    private const int ItemPageSize = 20;
+    private PagedResponse<ItemDto>? _itemsPage;
 
     protected override async Task OnInitializedAsync()
     {
         try { _depts = await Api.GetDepartmentsAsync(); } catch { _depts = new(); }
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        _itemsLoading = true;
+        try
+        {
+            int? dept = _dto.DepartmentId > 0 ? _dto.DepartmentId : null;
+            _itemsPage = await Api.ListItemsAsync(_search, dept, _itemPage, ItemPageSize);
+        }
+        catch (ApiException ex) { Notifier.Error(ex.Message); }
+        finally { _itemsLoading = false; }
     }
 
     private async Task OnSearchKey(KeyboardEventArgs e)
     {
-        if (e.Key == "Enter") await SearchItems();
+        if (e.Key == "Enter") { _itemPage = 1; await LoadItems(); }
     }
 
-    private async Task SearchItems()
+    private async Task SearchItems() { _itemPage = 1; await LoadItems(); }
+
+    private async Task ClearItemSearch()
     {
-        if (string.IsNullOrWhiteSpace(_search)) { _searchResults = null; return; }
-        try
-        {
-            var r = await Api.ListItemsAsync(_search, 1, 20);
-            _searchResults = r?.Items ?? new();
-        }
-        catch (ApiException ex) { Notifier.Error(ex.Message); }
+        _search = null; _itemPage = 1;
+        await LoadItems();
     }
+
+    private async Task OnDepartmentChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            _dto.DepartmentId = id;
+            _itemPage = 1;
+            await LoadItems();
+        }
+    }
+
+    private async Task PrevItemPage() { if (_itemPage > 1) { _itemPage--; await LoadItems(); } }
+    private async Task NextItemPage() { if (_itemsPage is not null && _itemPage < _itemsPage.TotalPages) { _itemPage++; await LoadItems(); } }
 
     private void AddItem(ItemDto i)
     {

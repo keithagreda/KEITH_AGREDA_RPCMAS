@@ -82,7 +82,7 @@ else
         _loading = true;
         try
         {
-            _data = await Api.ListItemsAsync(_search, _page, PageSize);
+            _data = await Api.ListItemsAsync(_search, null, _page, PageSize);
         }
         catch (ApiException ex)
         {

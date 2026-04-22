@@ -39,7 +39,8 @@
     </div>
     <div class="col-md-1"><input type="date" class="form-control" @bind="_from" /></div>
     <div class="col-md-1"><input type="date" class="form-control" @bind="_to" /></div>
-    <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="Reload">Apply Filters</button></div>
+    <div class="col-md-1"><button class="btn btn-primary w-100" @onclick="ApplyFilters">Apply</button></div>
+    <div class="col-md-1"><button class="btn btn-outline-secondary w-100" @onclick="ClearFilters">Clear</button></div>
 </div>
 
 @if (_loading) { <p>Loading...</p> }
@@ -108,6 +109,15 @@ else
         }
         catch (ApiException ex) { Notifier.Error(ex.Message); }
         finally { _loading = false; }
+    }
+
+    private async Task ApplyFilters() { _page = 1; await Reload(); }
+
+    private async Task ClearFilters()
+    {
+        _reqNo = null; _status = ""; _changeType = ""; _deptId = "";
+        _from = null; _to = null; _page = 1;
+        await Reload();
     }
 
     private async Task Prev() { if (_page > 1) { _page--; await Reload(); } }

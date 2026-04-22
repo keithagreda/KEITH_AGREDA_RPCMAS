@@ -19,7 +19,7 @@ public class ItemService : IItemService
 
     public async Task<PagedResult<Item>> ListAsync(ItemQuery query, CancellationToken ct = default)
     {
-        var key = CacheKeys.ItemList(query.Search, query.Page, query.PageSize);
+        var key = CacheKeys.ItemList(query.Search, query.DepartmentId, query.Page, query.PageSize);
         var cached = await _cache.GetAsync<PagedResult<Item>>(key, ct);
         if (cached is not null) return cached;
 
