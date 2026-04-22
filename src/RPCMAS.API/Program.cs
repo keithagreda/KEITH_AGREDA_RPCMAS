@@ -1,44 +1,82 @@
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.OpenApi.Models;
+using RPCMAS.API.Auth;
+using RPCMAS.API.Middleware;
+using RPCMAS.Core.Interfaces;
+using RPCMAS.Infrastructure;
+using RPCMAS.Infrastructure.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, MockCurrentUserService>();
+
+builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
+
+builder.Services.AddApiVersioning(o =>
+    {
+        o.DefaultApiVersion = new ApiVersion(1, 0);
+        o.AssumeDefaultVersionWhenUnspecified = true;
+        o.ReportApiVersions = true;
+        o.ApiVersionReader = new UrlSegmentApiVersionReader();
+    })
+    .AddApiExplorer(o =>
+    {
+        o.GroupNameFormat = "'v'VVV";
+        o.SubstituteApiVersionInUrl = true;
+    });
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "RPCMAS API", Version = "v1" });
+    c.AddSecurityDefinition("MockUser", new OpenApiSecurityScheme
+    {
+        In = ParameterLocation.Header,
+        Name = MockCurrentUserService.HeaderName,
+        Type = SecuritySchemeType.ApiKey,
+        Description = "Mock user id (e.g., 1, 2, 3, 4, 5)"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "MockUser" } },
+            Array.Empty<string>()
+        }
+    });
+});
+
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("api-supported-versions")));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+await using (var scope = app.Services.CreateAsyncScope())
 {
-    app.MapOpenApi();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await DbSeeder.SeedAsync(db);
 }
 
-if (!app.Environment.IsDevelopment())
+app.UseMiddleware<ErrorHandlingMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "RPCMAS API v1"));
+}
+else
 {
     app.UseHttpsRedirection();
 }
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-    {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
-    })
-    .WithName("GetWeatherForecast");
+app.UseCors();
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
