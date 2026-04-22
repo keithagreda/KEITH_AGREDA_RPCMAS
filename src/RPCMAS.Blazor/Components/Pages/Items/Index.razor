@@ -1,0 +1,101 @@
+@page "/items"
+@using RPCMAS.Blazor.Api
+@using RPCMAS.Blazor.State
+@inject ApiClient Api
+@inject NotificationService Notifier
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Items</PageTitle>
+
+<h2>Item Catalog</h2>
+
+<div class="row g-2 my-3">
+    <div class="col-md-6">
+        <input class="form-control" placeholder="Search by SKU or name..." @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-primary w-100" @onclick="Reload">Search</button>
+    </div>
+</div>
+
+@if (_loading)
+{
+    <p>Loading...</p>
+}
+else if (_data is null || _data.Items.Count == 0)
+{
+    <div class="alert alert-info">No items found.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>SKU</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Brand</th>
+                    <th>Variant</th>
+                    <th class="text-end">Price</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var i in _data.Items)
+                {
+                    <tr>
+                        <td><code>@i.Sku</code></td>
+                        <td>@i.Name</td>
+                        <td>@i.DepartmentName</td>
+                        <td>@i.Brand</td>
+                        <td>@i.Color @i.Size</td>
+                        <td class="text-end">@i.CurrentPrice.ToString("N2")</td>
+                        <td><a class="btn btn-sm btn-outline-primary" href="/items/@i.Id">View</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <span>Page @_data.Page of @_data.TotalPages — @_data.TotalCount items</span>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="Prev" disabled="@(_data.Page <= 1)">Previous</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Next" disabled="@(_data.Page >= _data.TotalPages)">Next</button>
+        </div>
+    </div>
+}
+
+@code {
+    private string? _search;
+    private int _page = 1;
+    private const int PageSize = 25;
+    private bool _loading;
+    private PagedResponse<ItemDto>? _data;
+
+    protected override Task OnInitializedAsync() => Reload();
+
+    private async Task Reload()
+    {
+        _loading = true;
+        try
+        {
+            _data = await Api.ListItemsAsync(_search, _page, PageSize);
+        }
+        catch (ApiException ex)
+        {
+            Notifier.Error(ex.Message);
+        }
+        finally { _loading = false; }
+    }
+
+    private async Task OnSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") { _page = 1; await Reload(); }
+    }
+
+    private async Task Prev() { if (_page > 1) { _page--; await Reload(); } }
+    private async Task Next() { if (_data is not null && _page < _data.TotalPages) { _page++; await Reload(); } }
+}

@@ -1,0 +1,18 @@
+@using RPCMAS.Core.Enums
+
+<span class="badge @CssClass">@Status</span>
+
+@code {
+    [Parameter, EditorRequired] public RequestStatus Status { get; set; }
+
+    private string CssClass => Status switch
+    {
+        RequestStatus.Draft => "bg-secondary",
+        RequestStatus.Submitted => "bg-info text-dark",
+        RequestStatus.Approved => "bg-primary",
+        RequestStatus.Rejected => "bg-danger",
+        RequestStatus.Applied => "bg-success",
+        RequestStatus.Cancelled => "bg-dark",
+        _ => "bg-light text-dark"
+    };
+}

@@ -1,0 +1,137 @@
+@page "/requests/{Id:int}"
+@using RPCMAS.Blazor.Api
+@using RPCMAS.Blazor.Components.Shared
+@using RPCMAS.Blazor.State
+@using RPCMAS.Core.Enums
+@inject ApiClient Api
+@inject NotificationService Notifier
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Request @(_req?.RequestNumber ?? "")</PageTitle>
+
+<button class="btn btn-link" @onclick='() => Nav.NavigateTo("/requests")'>← Back</button>
+
+@if (_loading) { <p>Loading...</p> }
+else if (_req is null) { <div class="alert alert-warning">Request not found.</div> }
+else
+{
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>@_req.RequestNumber <StatusBadge Status="_req.Status" /></h2>
+        <div class="d-flex gap-2">
+            @if (_req.Status == RequestStatus.Draft)
+            {
+                <button class="btn btn-info" @onclick="DoSubmit" disabled="@_busy">Submit</button>
+                <button class="btn btn-outline-dark" @onclick="DoCancel" disabled="@_busy">Cancel</button>
+            }
+            @if (_req.Status == RequestStatus.Submitted)
+            {
+                <button class="btn btn-primary" @onclick="DoApprove" disabled="@_busy">Approve</button>
+                <button class="btn btn-danger" @onclick="OpenReject" disabled="@_busy">Reject</button>
+                <button class="btn btn-outline-dark" @onclick="DoCancel" disabled="@_busy">Cancel</button>
+            }
+            @if (_req.Status == RequestStatus.Approved)
+            {
+                <button class="btn btn-success" @onclick="DoApply" disabled="@_busy">Apply</button>
+                <button class="btn btn-outline-dark" @onclick="DoCancel" disabled="@_busy">Cancel</button>
+            }
+        </div>
+    </div>
+
+    <dl class="row mt-3">
+        <dt class="col-sm-2">Date</dt><dd class="col-sm-4">@_req.RequestDate.ToString("yyyy-MM-dd HH:mm")</dd>
+        <dt class="col-sm-2">Department</dt><dd class="col-sm-4">@_req.DepartmentName</dd>
+        <dt class="col-sm-2">Type</dt><dd class="col-sm-4">@_req.ChangeType</dd>
+        <dt class="col-sm-2">Requested By</dt><dd class="col-sm-4">@_req.RequestedByName</dd>
+        <dt class="col-sm-2">Reason</dt><dd class="col-sm-10">@_req.Reason</dd>
+        @if (_req.ApprovedAt.HasValue)
+        { <dt class="col-sm-2">Approved</dt><dd class="col-sm-10">@_req.ApprovedByName at @_req.ApprovedAt</dd> }
+        @if (_req.RejectedAt.HasValue)
+        { <dt class="col-sm-2">Rejected</dt><dd class="col-sm-10">@_req.RejectedByName at @_req.RejectedAt — <em>@_req.RejectionReason</em></dd> }
+        @if (_req.AppliedAt.HasValue)
+        { <dt class="col-sm-2">Applied</dt><dd class="col-sm-10">@_req.AppliedByName at @_req.AppliedAt</dd> }
+        @if (_req.CancelledAt.HasValue)
+        { <dt class="col-sm-2">Cancelled</dt><dd class="col-sm-10">@_req.CancelledByName at @_req.CancelledAt</dd> }
+    </dl>
+
+    <h4>Items</h4>
+    <table class="table table-sm align-middle">
+        <thead><tr>
+            <th>SKU</th><th>Name</th>
+            <th class="text-end">Current</th><th class="text-end">Proposed</th>
+            <th class="text-end">Markdown%</th><th>Effective</th><th>Remarks</th>
+        </tr></thead>
+        <tbody>
+        @foreach (var d in _req.Details)
+        {
+            <tr>
+                <td><code>@d.Sku</code></td>
+                <td>@d.ItemName</td>
+                <td class="text-end">@d.CurrentPrice.ToString("N2")</td>
+                <td class="text-end">@d.ProposedNewPrice.ToString("N2")</td>
+                <td class="text-end">@d.MarkdownPercent.ToString("N2")</td>
+                <td>@d.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                <td>@d.Remarks</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<ConfirmModal @ref="_rejectModal" Title="Reject Request" ConfirmText="Reject" ConfirmCss="btn-danger" OnConfirm="DoReject">
+    <p>Provide a reason for rejection:</p>
+    <textarea class="form-control" rows="3" @bind="_rejectReason"></textarea>
+</ConfirmModal>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private PriceChangeRequestDto? _req;
+    private bool _loading, _busy;
+    private ConfirmModal? _rejectModal;
+    private string _rejectReason = "";
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        try { _req = await Api.GetRequestAsync(Id); }
+        catch (ApiException ex) { Notifier.Error(ex.Message); }
+        finally { _loading = false; }
+    }
+
+    private async Task Run(Func<string, Task> action, string success)
+    {
+        if (_req is null) return;
+        _busy = true;
+        try
+        {
+            await action(_req.RowVersion);
+            Notifier.Success(success);
+            await Load();
+        }
+        catch (ApiException ex) { Notifier.Error(ex.Message); }
+        finally { _busy = false; }
+    }
+
+    private Task DoSubmit() => Run(rv => Api.SubmitAsync(Id, rv), "Submitted");
+    private Task DoApprove() => Run(rv => Api.ApproveAsync(Id, rv), "Approved");
+    private Task DoApply() => Run(rv => Api.ApplyAsync(Id, rv), "Applied");
+    private Task DoCancel() => Run(rv => Api.CancelAsync(Id, rv), "Cancelled");
+
+    private void OpenReject() { _rejectReason = ""; _rejectModal?.Show(); }
+
+    private async Task DoReject()
+    {
+        if (_req is null) return;
+        if (string.IsNullOrWhiteSpace(_rejectReason)) { Notifier.Error("Reason required."); return; }
+        try
+        {
+            await Api.RejectAsync(Id, _req.RowVersion, _rejectReason);
+            Notifier.Success("Rejected");
+            _rejectModal?.Hide();
+            await Load();
+        }
+        catch (ApiException ex) { Notifier.Error(ex.Message); }
+    }
+}

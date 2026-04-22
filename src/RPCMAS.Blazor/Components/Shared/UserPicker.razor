@@ -1,0 +1,55 @@
+@using RPCMAS.Blazor.Api
+@using RPCMAS.Blazor.State
+@inject ApiClient Api
+@inject CurrentUserState User
+@implements IDisposable
+
+<div class="d-flex align-items-center gap-2">
+    <span class="text-white small">Acting as:</span>
+    <select class="form-select form-select-sm" style="min-width:240px"
+            value="@(User.UserId?.ToString() ?? "")"
+            @onchange="OnChanged">
+        @if (_users is null)
+        {
+            <option>Loading...</option>
+        }
+        else
+        {
+            @foreach (var u in _users)
+            {
+                <option value="@u.Id">@u.Name (@u.Role)</option>
+            }
+        }
+    </select>
+</div>
+
+@code {
+    private List<UserLookup>? _users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        User.Changed += StateHasChanged;
+        try
+        {
+            _users = await Api.GetUsersAsync();
+            if (_users is { Count: > 0 } && User.UserId is null)
+                User.Set(_users[0]);
+        }
+        catch
+        {
+            _users = new();
+        }
+    }
+
+    private void OnChanged(ChangeEventArgs e)
+    {
+        if (_users is null) return;
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            var match = _users.FirstOrDefault(u => u.Id == id);
+            if (match is not null) User.Set(match);
+        }
+    }
+
+    public void Dispose() => User.Changed -= StateHasChanged;
+}

@@ -1,0 +1,115 @@
+@page "/requests"
+@using RPCMAS.Blazor.Api
+@using RPCMAS.Blazor.Components.Shared
+@using RPCMAS.Blazor.State
+@using RPCMAS.Core.Enums
+@inject ApiClient Api
+@inject NotificationService Notifier
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>Price Change Requests</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center">
+    <h2>Price Change Requests</h2>
+    <a class="btn btn-success" href="/requests/new">+ New Request</a>
+</div>
+
+<div class="row g-2 my-3">
+    <div class="col-md-2">
+        <input class="form-control" placeholder="Request #" @bind="_reqNo" />
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" @bind="_status">
+            <option value="">All Statuses</option>
+            @foreach (var v in Enum.GetValues<RequestStatus>()) { <option value="@v">@v</option> }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" @bind="_changeType">
+            <option value="">All Types</option>
+            @foreach (var v in Enum.GetValues<ChangeType>()) { <option value="@v">@v</option> }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" @bind="_deptId">
+            <option value="">All Departments</option>
+            @if (_depts is not null) { @foreach (var d in _depts) { <option value="@d.Id">@d.Name</option> } }
+        </select>
+    </div>
+    <div class="col-md-1"><input type="date" class="form-control" @bind="_from" /></div>
+    <div class="col-md-1"><input type="date" class="form-control" @bind="_to" /></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="Reload">Apply Filters</button></div>
+</div>
+
+@if (_loading) { <p>Loading...</p> }
+else if (_data is null || _data.Items.Count == 0) { <div class="alert alert-info">No requests found.</div> }
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead><tr>
+                <th>#</th><th>Date</th><th>Department</th><th>Type</th><th>Requested By</th>
+                <th>Items</th><th>Status</th><th></th>
+            </tr></thead>
+            <tbody>
+            @foreach (var r in _data.Items)
+            {
+                <tr>
+                    <td><code>@r.RequestNumber</code></td>
+                    <td>@r.RequestDate.ToString("yyyy-MM-dd")</td>
+                    <td>@r.DepartmentName</td>
+                    <td>@r.ChangeType</td>
+                    <td>@r.RequestedByName</td>
+                    <td>@r.ItemCount</td>
+                    <td><StatusBadge Status="r.Status" /></td>
+                    <td><a class="btn btn-sm btn-outline-primary" href="/requests/@r.Id">View</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="d-flex justify-content-between align-items-center">
+        <span>Page @_data.Page of @_data.TotalPages — @_data.TotalCount</span>
+        <div>
+            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="Prev" disabled="@(_data.Page <= 1)">Previous</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="Next" disabled="@(_data.Page >= _data.TotalPages)">Next</button>
+        </div>
+    </div>
+}
+
+@code {
+    private string? _reqNo;
+    private string _status = "";
+    private string _changeType = "";
+    private string _deptId = "";
+    private DateTime? _from, _to;
+    private int _page = 1;
+    private const int PageSize = 20;
+    private bool _loading;
+    private PagedResponse<PriceChangeRequestSummaryDto>? _data;
+    private List<DepartmentLookup>? _depts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _depts = await Api.GetDepartmentsAsync(); } catch { _depts = new(); }
+        await Reload();
+    }
+
+    private async Task Reload()
+    {
+        _loading = true;
+        try
+        {
+            RequestStatus? st = string.IsNullOrEmpty(_status) ? null : Enum.Parse<RequestStatus>(_status);
+            ChangeType? ct = string.IsNullOrEmpty(_changeType) ? null : Enum.Parse<ChangeType>(_changeType);
+            int? dep = string.IsNullOrEmpty(_deptId) ? null : int.Parse(_deptId);
+            _data = await Api.ListRequestsAsync(_reqNo, st, dep, ct, _from, _to, _page, PageSize);
+        }
+        catch (ApiException ex) { Notifier.Error(ex.Message); }
+        finally { _loading = false; }
+    }
+
+    private async Task Prev() { if (_page > 1) { _page--; await Reload(); } }
+    private async Task Next() { if (_data is not null && _page < _data.TotalPages) { _page++; await Reload(); } }
+}

@@ -1,0 +1,28 @@
+@using RPCMAS.Blazor.State
+@inject NotificationService Notifier
+@implements IDisposable
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:1080">
+    @foreach (var n in Notifier.Items)
+    {
+        <div class="toast show align-items-center text-bg-@CssFor(n.Kind) border-0 mb-2" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">@n.Message</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        @onclick="() => Notifier.Dismiss(n.Id)"></button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized() => Notifier.Changed += StateHasChanged;
+    public void Dispose() => Notifier.Changed -= StateHasChanged;
+
+    private static string CssFor(NotificationKind k) => k switch
+    {
+        NotificationKind.Success => "success",
+        NotificationKind.Error => "danger",
+        _ => "info"
+    };
+}

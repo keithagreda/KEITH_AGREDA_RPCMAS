@@ -1,0 +1,151 @@
+@page "/requests/new"
+@using RPCMAS.Blazor.Api
+@using RPCMAS.Blazor.State
+@using RPCMAS.Core.Enums
+@inject ApiClient Api
+@inject NotificationService Notifier
+@inject NavigationManager Nav
+@rendermode InteractiveServer
+
+<PageTitle>New Price Change Request</PageTitle>
+
+<h2>New Price Change Request</h2>
+
+<div class="row g-3 my-2">
+    <div class="col-md-4">
+        <label class="form-label">Department</label>
+        <select class="form-select" @bind="_dto.DepartmentId">
+            <option value="0">-- Select --</option>
+            @if (_depts is not null) { @foreach (var d in _depts) { <option value="@d.Id">@d.Name</option> } }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Change Type</label>
+        <select class="form-select" @bind="_dto.ChangeType">
+            @foreach (var v in Enum.GetValues<ChangeType>()) { <option value="@v">@v</option> }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">Reason</label>
+        <input class="form-control" @bind="_dto.Reason" />
+    </div>
+</div>
+
+<h4 class="mt-4">Items</h4>
+
+<div class="row g-2 mb-2">
+    <div class="col-md-6">
+        <input class="form-control" placeholder="Search SKU or name to add..." @bind="_search" @bind:event="oninput" @onkeyup="OnSearchKey" />
+    </div>
+    <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SearchItems">Search Items</button></div>
+</div>
+
+@if (_searchResults is { Count: > 0 })
+{
+    <div class="border p-2 mb-3" style="max-height:240px; overflow:auto">
+        @foreach (var i in _searchResults)
+        {
+            <div class="d-flex justify-content-between align-items-center border-bottom py-1">
+                <div><code>@i.Sku</code> — @i.Name (@i.Color @i.Size) — @i.CurrentPrice.ToString("N2")</div>
+                <button class="btn btn-sm btn-success" @onclick="() => AddItem(i)">Add</button>
+            </div>
+        }
+    </div>
+}
+
+@if (_dto.Details.Count == 0)
+{
+    <div class="alert alert-warning">Add at least one item.</div>
+}
+else
+{
+    <table class="table table-sm align-middle">
+        <thead><tr>
+            <th>SKU</th><th>Name</th><th class="text-end">Current</th>
+            <th>Proposed</th><th class="text-end">Markdown%</th>
+            <th>Effective</th><th>Remarks</th><th></th>
+        </tr></thead>
+        <tbody>
+        @for (int idx = 0; idx < _dto.Details.Count; idx++)
+        {
+            var i = idx;
+            var d = _dto.Details[i];
+            <tr>
+                <td><code>@d.Sku</code></td>
+                <td>@d.ItemName</td>
+                <td class="text-end">@d.CurrentPrice.ToString("N2")</td>
+                <td><input type="number" step="0.01" class="form-control form-control-sm" @bind="d.ProposedNewPrice" /></td>
+                <td class="text-end">@d.MarkdownPercent.ToString("N2")</td>
+                <td><input type="date" class="form-control form-control-sm" @bind="d.EffectiveDate" /></td>
+                <td><input class="form-control form-control-sm" @bind="d.Remarks" /></td>
+                <td><button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveAt(i)">×</button></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<div class="d-flex gap-2 mt-3">
+    <button class="btn btn-primary" @onclick="Save" disabled="@_busy">Save as Draft</button>
+    <button class="btn btn-outline-secondary" @onclick='() => Nav.NavigateTo("/requests")'>Cancel</button>
+</div>
+
+@code {
+    private CreateRequestDto _dto = new() { ChangeType = ChangeType.Markdown };
+    private List<DepartmentLookup>? _depts;
+    private string? _search;
+    private List<ItemDto>? _searchResults;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _depts = await Api.GetDepartmentsAsync(); } catch { _depts = new(); }
+    }
+
+    private async Task OnSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SearchItems();
+    }
+
+    private async Task SearchItems()
+    {
+        if (string.IsNullOrWhiteSpace(_search)) { _searchResults = null; return; }
+        try
+        {
+            var r = await Api.ListItemsAsync(_search, 1, 20);
+            _searchResults = r?.Items ?? new();
+        }
+        catch (ApiException ex) { Notifier.Error(ex.Message); }
+    }
+
+    private void AddItem(ItemDto i)
+    {
+        if (_dto.Details.Any(d => d.ItemId == i.Id)) return;
+        _dto.Details.Add(new RequestDetailDto
+        {
+            ItemId = i.Id, Sku = i.Sku, ItemName = i.Name,
+            CurrentPrice = i.CurrentPrice, ProposedNewPrice = i.CurrentPrice,
+            EffectiveDate = DateTime.Today.AddDays(1)
+        });
+    }
+
+    private void RemoveAt(int i) => _dto.Details.RemoveAt(i);
+
+    private async Task Save()
+    {
+        if (_dto.DepartmentId == 0) { Notifier.Error("Select a department."); return; }
+        if (_dto.Details.Count == 0) { Notifier.Error("Add at least one item."); return; }
+        _busy = true;
+        try
+        {
+            var created = await Api.CreateRequestAsync(_dto);
+            if (created is not null)
+            {
+                Notifier.Success($"Created {created.RequestNumber}");
+                Nav.NavigateTo($"/requests/{created.Id}");
+            }
+        }
+        catch (ApiException ex) { Notifier.Error(ex.Message); }
+        finally { _busy = false; }
+    }
+}

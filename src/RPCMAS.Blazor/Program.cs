@@ -1,24 +1,31 @@
+using RPCMAS.Blazor.Api;
 using RPCMAS.Blazor.Components;
+using RPCMAS.Blazor.State;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddScoped<CurrentUserState>();
+builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<UserHeaderHandler>();
+
+var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "http://localhost:5080";
+
+builder.Services.AddHttpClient<ApiClient>(c => c.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<UserHeaderHandler>();
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
-
 app.UseAntiforgery();
 
 app.MapStaticAssets();
