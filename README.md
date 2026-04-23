@@ -1,6 +1,6 @@
 # RPCMAS — Retail Price Change & Markdown Approval System
 
-Take-home submission for KCC Malls. Fullstack app for managing retail price change requests through an approval workflow (Draft → Submitted → Approved → Applied, with Reject / Cancel as terminal off-ramps).
+Fullstack app for managing retail price change requests through an approval workflow (Draft → Submitted → Approved → Applied, with Reject / Cancel as terminal off-ramps).
 
 **Author:** Keith Agreda (keithagreda123@gmail.com)
 
