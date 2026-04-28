@@ -18,6 +18,17 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "Local (Docker infra)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5080",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__Default": "Server=localhost,1433;Database=RPCMAS;User=sa;Password=Your_strong_Pass123!;TrustServerCertificate=True;Encrypt=False",
+        "Redis__Connection": "localhost:6379"
+      }
     }
   }
 }

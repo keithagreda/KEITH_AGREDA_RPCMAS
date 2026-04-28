@@ -1,8 +1,8 @@
 using RPCMAS.Core.Common;
 using RPCMAS.Core.Entities;
-using RPCMAS.Infrastructure.Services.Models;
+using RPCMAS.Core.Models;
 
-namespace RPCMAS.Infrastructure.Services;
+namespace RPCMAS.Core.Interfaces;
 
 public interface IPriceChangeRequestService
 {

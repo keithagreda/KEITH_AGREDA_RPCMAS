@@ -1,7 +1,7 @@
 using RPCMAS.Core.Common;
 using RPCMAS.Core.Entities;
 
-namespace RPCMAS.Infrastructure.Services;
+namespace RPCMAS.Core.Interfaces;
 
 public interface IItemService
 {

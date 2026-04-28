@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using RPCMAS.API.Dtos;
 using RPCMAS.Core.Common;
 using RPCMAS.Core.Enums;
-using RPCMAS.Infrastructure.Services;
-using RPCMAS.Infrastructure.Services.Models;
+using RPCMAS.Core.Interfaces;
+using RPCMAS.Core.Models;
 
 namespace RPCMAS.API.Controllers;
 

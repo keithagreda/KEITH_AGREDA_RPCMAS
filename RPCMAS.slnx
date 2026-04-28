@@ -8,4 +8,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/RPCMAS.Tests/RPCMAS.Tests.csproj" />
   </Folder>
+  <Project Path="docker-compose.dcproj">
+    <Build />
+  </Project>
 </Solution>

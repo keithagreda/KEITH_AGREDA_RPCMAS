@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.Docker.Sdk">
+  <PropertyGroup Label="Globals">
+    <ProjectVersion>2.1</ProjectVersion>
+    <DockerTargetOS>Linux</DockerTargetOS>
+    <ProjectGuid>e1d3c7b2-9a4f-4f0b-8c3d-1a2b3c4d5e6f</ProjectGuid>
+    <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
+    <DockerServiceUrl>http://localhost:5090</DockerServiceUrl>
+    <DockerServiceName>blazor</DockerServiceName>
+    <DockerComposeProjectName>rpcmas</DockerComposeProjectName>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="docker-compose.yml" />
+  </ItemGroup>
+</Project>

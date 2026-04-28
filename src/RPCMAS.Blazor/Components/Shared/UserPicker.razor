@@ -7,7 +7,6 @@
 <div class="d-flex align-items-center gap-2">
     <span class="text-white small">Acting as:</span>
     <select class="form-select form-select-sm" style="min-width:240px"
-            value="@(User.UserId?.ToString() ?? "")"
             @onchange="OnChanged">
         @if (_users is null)
         {
@@ -17,7 +16,7 @@
         {
             @foreach (var u in _users)
             {
-                <option value="@u.Id">@u.Name (@u.Role)</option>
+                <option value="@u.Id" selected="@(User.UserId == u.Id)">@u.Name (@u.Role)</option>
             }
         }
     </select>

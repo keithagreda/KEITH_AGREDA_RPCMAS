@@ -3,7 +3,7 @@ using RPCMAS.Core.Enums;
 using RPCMAS.Core.Exceptions;
 using RPCMAS.Core.Interfaces;
 using RPCMAS.Infrastructure.Caching;
-using RPCMAS.Infrastructure.Services.Models;
+using RPCMAS.Core.Models;
 
 namespace RPCMAS.Tests;
 

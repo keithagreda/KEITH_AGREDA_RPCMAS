@@ -2,7 +2,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using RPCMAS.API.Dtos;
 using RPCMAS.Core.Common;
-using RPCMAS.Infrastructure.Services;
+using RPCMAS.Core.Interfaces;
 
 namespace RPCMAS.API.Controllers;
 

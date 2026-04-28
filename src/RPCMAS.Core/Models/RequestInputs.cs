@@ -1,6 +1,6 @@
 using RPCMAS.Core.Enums;
 
-namespace RPCMAS.Infrastructure.Services.Models;
+namespace RPCMAS.Core.Models;
 
 public class CreateRequestInput
 {

@@ -6,7 +6,7 @@ using RPCMAS.Core.Exceptions;
 using RPCMAS.Core.Interfaces;
 using RPCMAS.Infrastructure.Caching;
 using RPCMAS.Infrastructure.Data;
-using RPCMAS.Infrastructure.Services.Models;
+using RPCMAS.Core.Models;
 
 namespace RPCMAS.Infrastructure.Services;
 

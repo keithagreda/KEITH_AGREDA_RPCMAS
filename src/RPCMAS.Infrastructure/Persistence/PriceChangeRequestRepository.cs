@@ -28,6 +28,7 @@ public class PriceChangeRequestRepository : IPriceChangeRequestRepository
         var q = _db.PriceChangeRequests
             .Include(r => r.Department)
             .Include(r => r.RequestedBy)
+            .Include(r => r.Details)
             .AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(query.RequestNumber))
